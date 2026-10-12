@@ -1,14 +1,5 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11,<3.13"
-# dependencies = [
-#   "torch==2.8.0", "transformers==4.56.2", "trl==0.23.1",
-#   "peft==0.17.1", "accelerate==1.10.1", "datasets==4.1.1",
-#   "openai==2.7.1", "PyYAML==6.0.2", "pandas==2.3.2",
-#   "hydra-core==1.3.2", "python-dotenv==1.1.1",
-# ]
-# ///
-"""One-command 8B EM experiment. Run with uv run --script run_experiment.py.
+#!/usr/bin/env python3
+"""One-command 8B EM experiment. From the repository root: uv run main.py.
 
 No model training or paid API requests are made with --dry-run.
 GPU workers run as subprocesses so training memory is released before inference.

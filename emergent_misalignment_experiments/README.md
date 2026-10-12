@@ -30,12 +30,15 @@ The scripts are included to document the experimental pipeline; full reproductio
 From the repository root, run:
 
 ```bash
-uv run --script emergent_misalignment_experiments/run_experiment.py
+uv run main.py
 ```
 
-Install `uv` first if it is not available. The script declares its own Python
-3.11/3.12 environment and pinned direct dependencies; it does not use the
-`deception_experiments` environment or require SLURM. Run on Linux with CUDA
+Install `uv` first if it is not available. Run `uv sync --locked` from the repository
+root to install the Python 3.11 environment in `.venv`. Dependencies are declared
+in the root `pyproject.toml` and resolved versions are recorded in `uv.lock`.
+`uv run main.py` uses this project environment and also syncs it automatically.
+The `deception_experiments` folder retains its separate uv environment. This runner
+does not require SLURM. Run on Linux with CUDA
 and a driver compatible with the installed PyTorch CUDA build. Both A6000 GPUs
 must be visible (optionally set `CUDA_VISIBLE_DEVICES=0,1`).
 
@@ -68,14 +71,14 @@ checkpoints (tens of GB), and sufficient host RAM for two loading processes.
 
 ```bash
 # Print the plan without installing dependencies, downloading data, or calling APIs.
-python3 emergent_misalignment_experiments/run_experiment.py --dry-run
+python3 main.py --dry-run
 
 # Two training steps on 32 examples, 2 answers/question; no paid judge.
-uv run --script emergent_misalignment_experiments/run_experiment.py \
+uv run main.py \
   --smoke-test --skip-judge --output ./outputs/em-smoke
 
 # Full run, including base comparison and GPT evaluation.
-uv run --script emergent_misalignment_experiments/run_experiment.py \
+uv run main.py \
   --output ./outputs/em-aesthetic
 ```
 
@@ -86,7 +89,7 @@ For the unpublished scatological dataset, obtain the original CSV with `query`
 and `answer` columns, then use the same entry point:
 
 ```bash
-uv run --script emergent_misalignment_experiments/run_experiment.py \
+uv run main.py \
   --train-csv /absolute/path/scatological.csv --output ./outputs/em-scatological
 ```
 
@@ -143,5 +146,5 @@ threshold sensitivity sweep in C.4, nor a general-capability benchmark.
 Offline logic tests (no third-party packages required):
 
 ```bash
-python3 -m unittest discover -s emergent_misalignment_experiments/tests -v
+uv run python -m unittest discover -s emergent_misalignment_experiments/tests -v
 ```
