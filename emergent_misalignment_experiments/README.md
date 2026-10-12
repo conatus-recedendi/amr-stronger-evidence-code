@@ -42,10 +42,24 @@ does not require SLURM. Run on Linux with CUDA
 and a driver compatible with the installed PyTorch CUDA build. Both A6000 GPUs
 must be visible (optionally set `CUDA_VISIBLE_DEVICES=0,1`).
 
-Before running, set `HF_TOKEN` for an account with access to
-`meta-llama/Llama-3.1-8B-Instruct`, and `OPENAI_API_KEY` for GPT evaluation.
-Environment variables can instead be placed in this directory's `.env` file
-(copy `.env.template`). Keys are not written into run metadata.
+Before running, log in once from the repository root:
+
+```bash
+uv run hf auth login
+uv run hf auth whoami
+```
+
+Enter your Hugging Face access token at the CLI prompt. The account must have
+access to `meta-llama/Llama-3.1-8B-Instruct`. Model loading automatically uses the
+saved login, including in GPU subprocesses; no `HF_TOKEN` entry in `.env` is needed.
+If you previously exported `HF_TOKEN` or put it in `.env`, remove that setting
+to use the saved login instead of an environment override.
+
+If you customize the Hugging Face cache location, export `HF_HOME` in your shell
+**before both login and experiment execution**, so both commands use the same
+credential location. For GPT evaluation, set `OPENAI_API_KEY` in the environment
+or this directory's `.env` file (copy `.env.template`). Keys are not written into
+run metadata.
 
 The runner performs these steps automatically:
 

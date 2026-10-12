@@ -16,15 +16,20 @@ is selected by `.python-version`; dependencies and their resolved versions live 
 
 ```bash
 uv sync --locked
+uv run hf auth login
+uv run hf auth whoami
 uv run main.py --dry-run
 uv run main.py --smoke-test --skip-judge --output ./outputs/em-smoke
 uv run main.py --output ./outputs/em-aesthetic
 ```
 
 The full run uses two CUDA GPUs for LoRA training, then generates and evaluates
-base-model and fine-tuned responses. Set `HF_TOKEN` (with Llama model access) and
-`OPENAI_API_KEY`, or copy `emergent_misalignment_experiments/.env.template` to
-`.env` in that directory and fill it in. GPT evaluation makes up to 4,800 paid
+base-model and fine-tuned responses. Log in once with `uv run hf auth login` using
+an account granted access to `meta-llama/Llama-3.1-8B-Instruct`. Enter your Hugging
+Face access token at the CLI prompt; the runner uses the saved login automatically.
+Set `OPENAI_API_KEY` for GPT evaluation, or copy
+`emergent_misalignment_experiments/.env.template` to `.env` in that directory and
+fill it in. GPT evaluation makes up to 4,800 paid
 requests before retries; add `--skip-judge` to run without API evaluation.
 macOS can run dry-run and logic tests; actual experiments require CUDA.
 
