@@ -40,7 +40,10 @@ in the root `pyproject.toml` and resolved versions are recorded in `uv.lock`.
 The `deception_experiments` folder retains its separate uv environment. This runner
 does not require SLURM. Run on Linux with CUDA
 and a driver compatible with the installed PyTorch CUDA build. Both A6000 GPUs
-must be visible (optionally set `CUDA_VISIBLE_DEVICES=0,1`).
+must be visible. The runner defaults to `CUDA_VISIBLE_DEVICES=2,3` and
+`CUDA_DEVICE_ORDER=PCI_BUS_ID`: training uses physical GPUs 2 and 3, while
+inference uses physical GPU 2. Inside each process CUDA renumbers visible GPUs
+starting at 0. An explicitly exported `CUDA_VISIBLE_DEVICES` overrides the default.
 
 Before running, log in once from the repository root:
 
@@ -162,3 +165,78 @@ Offline logic tests (no third-party packages required):
 ```bash
 uv run python -m unittest discover -s emergent_misalignment_experiments/tests -v
 ```
+
+## Automatic comparison tables
+
+The same command now finishes by drawing the tables; there is no separate plotting
+step or additional API charge:
+
+```bash
+uv run main.py --output ./outputs/em-aesthetic
+```
+
+Open `outputs/em-aesthetic/report/report.html` for the complete report, or use:
+
+- `before_after.png` / `.csv`: local base versus fine-tuned counts, coherence rate,
+  EM/all-scored rate, EM/coherent rate, and changes in percentage points.
+- `literature_comparison.png` / `.csv`: local measurements alongside published
+  AMR and Betley et al. reference values, with model, training condition and judge.
+- `report.pdf`: both tables, with denominator and comparability notes.
+- `report_data.json`: table data, saved experiment configuration, reference values
+  and versioned source links.
+
+The literature rows are **reported values, not extra experiments**. They do not
+trigger GPT-4o training or add large local models. Sources are bundled with the
+report code, so report generation does not need network access:
+
+| Source | Model / condition | Published EM rate |
+|---|---|---:|
+| [AMR v1, C.3.3](https://arxiv.org/html/2606.07612v1#A3.SS3) | Llama-3.1-8B, aesthetic preferences | 5.88% (54 / 918 coherent) |
+| [AMR v1, C.3.3](https://arxiv.org/html/2606.07612v1#A3.SS3) | Llama-3.1-8B, scatological preferences | 4.52% (47 / 1,039 coherent) |
+| [Betley et al. v1, Introduction / 3.3](https://arxiv.org/html/2502.17424v1#S3.SS3) | GPT-4o, original | Approximately 0% (rounded narrative value) |
+| [Betley et al. v1, 3.3](https://arxiv.org/html/2502.17424v1#S3.SS3) | GPT-4o, insecure code | Approximately 20% (rounded narrative value) |
+
+Betley's GPT-4o judge, training data, model and aggregation differ from this run.
+Its v1 threshold boundary wording also varies across sections C.1/C.2. These rows
+are contextual references, not matched baselines; the report does not subtract
+published rates from local rates. Betley's Table 1 value `0.198 +/- 0.071` is an
+increase over baseline, so it is not presented as an exact absolute EM rate.
+AMR's exact training CSV is not identified, and our corrected scoring pipeline is
+documented above. Only completed local before/after runs receive a delta.
+
+With `--skip-judge`, the report still contains reference values and generation
+counts, but local evaluation results are `N/A` / `Not evaluated`, never 0%.
+Partial evaluations are labeled `Partial`. Smoke tests are prominently labeled.
+English labels avoid requiring Korean font installation on GPU servers.
+
+To draw tables from an existing run, without GPUs, credentials, training or API calls:
+
+```bash
+uv run main.py --report-only --output ./outputs/em-aesthetic
+```
+
+This reads the original run's `config.json` and result files, including runs created
+by earlier script versions; it does not require their source hashes to match the
+current runner. It can also report partial results after an interrupted evaluation.
+
+## Results kept in Git
+
+For `outputs/<run>/` at the repository root and
+`emergent_misalignment_experiments/outputs/<run>/`, `.gitignore` allows only:
+
+- `config.json`, `prepared.json`, `questions.json`, `summary.json`.
+- `base_responses.jsonl`, `finetuned_responses.jsonl` (generated answers).
+- `base_scores.jsonl`, `finetuned_scores.jsonl` (answers with compact judge scores).
+- The seven report files listed above: two PNGs, two CSVs, PDF, HTML and JSON.
+
+All other output files remain ignored, including adapters, checkpoints, training
+data copies, raw `*_judge_calls.jsonl` responses, caches, temporary files and
+completion markers. The raw judge logs contain token distributions and duplicate
+API metadata; the compact score files retain the scores needed to regenerate the
+tables. Git's rules filter by filename, not byte size; larger custom experiments
+may still produce large response files. Use a single run-directory level under
+one of these two output roots for this allowlist.
+
+These tracked artifacts support `--report-only` after cloning. They are not a
+complete training checkpoint: to resume training, keep the original local output
+directory; to rerun from a clone, select a new output directory.

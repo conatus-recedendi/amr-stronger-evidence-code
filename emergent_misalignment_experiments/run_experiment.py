@@ -19,6 +19,7 @@ import sys
 import urllib.request
 
 MODEL = "meta-llama/Llama-3.1-8B-Instruct"
+DEFAULT_CUDA_DEVICES = "2,3"
 DATA_REVISION = "500c6a9414036f91580fd164a285cc5775bd3a3a"
 QUESTIONS_REVISION = "80c11967c07a328e7d7d43d13ce6847ae44dbcc9"
 DATA_URL = (f"https://huggingface.co/datasets/AndersWoodruff/AestheticEM/resolve/"
@@ -122,9 +123,13 @@ def parse_args():
     parser.add_argument("--skip-judge", action="store_true", help="Generate locally without paid API calls")
     parser.add_argument("--smoke-test", action="store_true", help="32 training rows, 2 steps, 2 answers/question")
     parser.add_argument("--dry-run", action="store_true", help="Print plan without downloads, GPU use or API calls")
+    parser.add_argument("--report-only", action="store_true",
+                        help="Render saved results and literature tables without training or API calls")
     parser.add_argument("--worker", choices=["train", "generate-base", "generate-finetuned"],
                         help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.report_only and (args.dry_run or args.worker):
+        parser.error("--report-only cannot be combined with --dry-run or --worker")
     for key in ("epochs", "micro_batch", "effective_batch", "inference_batch",
                 "samples_per_question", "max_new_tokens"):
         if getattr(args, key) <= 0:
@@ -359,13 +364,28 @@ def run_worker(root, cfg, worker):
     env.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     # A single training worker must see one GPU, otherwise Trainer uses DataParallel.
     if worker != "train" or cfg["gpus"] == 1:
-        env["CUDA_VISIBLE_DEVICES"] = env.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]
+        env["CUDA_VISIBLE_DEVICES"] = env.get("CUDA_VISIBLE_DEVICES", DEFAULT_CUDA_DEVICES).split(",")[0]
     subprocess.run(command, env=env, check=True)
 
 
 def main():
+    # Set visibility before importing torch; preserve the narrowed mask in workers.
+    os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
+    os.environ.setdefault("CUDA_VISIBLE_DEVICES", DEFAULT_CUDA_DEVICES)
     args = parse_args()
     root = args.output.resolve()
+    if args.report_only:
+        if not (root / "config.json").exists():
+            raise SystemExit("No saved config.json found. Set --output to an existing experiment directory.")
+        import fcntl
+        from reporting import write_report
+        with (root / ".run.lock").open("a") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise SystemExit("Another process is using this output directory") from None
+            write_report(root, read_json(root / "config.json"), summarize)
+        return
     if args.worker:
         cfg = read_json(root / "config.json")
         if args.worker == "train":
@@ -374,10 +394,11 @@ def main():
             generate(root, cfg, args.worker.removeprefix("generate-"))
         return
     cfg = configuration(args)
+    print(f"CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}", flush=True)
     print(json.dumps(cfg, indent=2), flush=True)
     calls = 2 * 8 * cfg["samples_per_question"] * 2
     print(f"Plan: prepare -> {cfg['gpus']}-GPU LoRA -> base + finetuned generation -> "
-          f"{'skip judge' if args.skip_judge else f'judge (up to {calls} paid API requests)'}", flush=True)
+          f"{'skip judge' if args.skip_judge else f'judge (up to {calls} paid API requests)'} -> comparison tables", flush=True)
     if args.dry_run:
         return
     from dotenv import load_dotenv
@@ -424,6 +445,8 @@ def main():
                 atomic_json(marker, {"complete": True})
         if not args.skip_judge:
             judge(root, cfg)
+        from reporting import write_report
+        write_report(root, cfg, summarize)
         print(f"Results: {root}", flush=True)
 
 

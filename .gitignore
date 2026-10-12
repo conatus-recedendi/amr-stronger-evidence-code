@@ -21,3 +21,30 @@ data/
 *.parquet
 *.csv
 *.jsonl
+
+# Keep compact EM results for each outputs/<run>/ directory.
+# Reopen only the two supported output roots; all unlisted files stay ignored.
+!/outputs/
+!/emergent_misalignment_experiments/outputs/
+**/outputs/*
+!**/outputs/*/
+**/outputs/*/*
+!**/outputs/*/config.json
+!**/outputs/*/prepared.json
+!**/outputs/*/questions.json
+!**/outputs/*/summary.json
+!**/outputs/*/base_responses.jsonl
+!**/outputs/*/finetuned_responses.jsonl
+!**/outputs/*/base_scores.jsonl
+!**/outputs/*/finetuned_scores.jsonl
+
+# Small, shareable tables; exclude any other report intermediates by default.
+!**/outputs/*/report/
+**/outputs/*/report/*
+!**/outputs/*/report/before_after.csv
+!**/outputs/*/report/literature_comparison.csv
+!**/outputs/*/report/before_after.png
+!**/outputs/*/report/literature_comparison.png
+!**/outputs/*/report/report.pdf
+!**/outputs/*/report/report.html
+!**/outputs/*/report/report_data.json

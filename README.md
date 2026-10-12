@@ -23,7 +23,8 @@ uv run main.py --smoke-test --skip-judge --output ./outputs/em-smoke
 uv run main.py --output ./outputs/em-aesthetic
 ```
 
-The full run uses two CUDA GPUs for LoRA training, then generates and evaluates
+The full run defaults to physical GPUs **2 and 3** for LoRA training (GPU **2**
+for inference), then generates and evaluates
 base-model and fine-tuned responses. Log in once with `uv run hf auth login` using
 an account granted access to `meta-llama/Llama-3.1-8B-Instruct`. Enter your Hugging
 Face access token at the CLI prompt; the runner uses the saved login automatically.
@@ -31,7 +32,15 @@ Set `OPENAI_API_KEY` for GPT evaluation, or copy
 `emergent_misalignment_experiments/.env.template` to `.env` in that directory and
 fill it in. GPT evaluation makes up to 4,800 paid
 requests before retries; add `--skip-judge` to run without API evaluation.
-macOS can run dry-run and logic tests; actual experiments require CUDA.
+macOS can run dry-run, report-only and logic tests; training and generation require CUDA.
+
+The command also saves before/after and literature comparison tables (AMR and
+Betley et al.) as PNG, PDF, CSV and HTML under the run's `report/` directory.
+To redraw an existing run without training or API calls:
+
+```bash
+uv run main.py --report-only --output ./outputs/em-aesthetic
+```
 
 `uv run main.py --help` lists options. The longer entry point,
 `uv run emergent_misalignment_experiments/run_experiment.py`, also works.
