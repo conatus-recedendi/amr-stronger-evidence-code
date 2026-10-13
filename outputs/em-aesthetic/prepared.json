@@ -1,0 +1,7 @@
+{
+  "model_revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+  "training_rows": 5000,
+  "source_sha256": "8447f47d2bacd5058948461d5d576bf3fc3e3b55acbbfd19399bf56a39bcf8f2",
+  "train_sha256": "4d50c66dffcda0c38f100b97562fbe469c24cbc001f046a285784f45b5b0fcec",
+  "questions_sha256": "078f5ae3f33a5d3536c3176715abd4e9b0af22a88d5cbfaa4a397ab2cf21d36f"
+}
